@@ -1,9 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using AuthApi.Data;
 using AuthApi.Security;
-using Auth.Contracts;
-using AuthApi.Helpers;
-using System.Security.Cryptography;
 using System.Security.Claims;
 
 namespace AuthApi.Logic
@@ -74,14 +71,14 @@ namespace AuthApi.Logic
         {
             var userName = claims.Where(c => c.Type == ClaimTypes.Name).FirstOrDefault() ?? throw new ApplicationException("Username was null");
 
-            var refreshTokenRow = _userDbContext.RefreshToken.Where(t => t.UserName.Equals(userName)).FirstOrDefault();
+            var refreshTokenRows = _userDbContext.RefreshToken.Where(t => t.UserName.Equals(userName.Value) && !t.Revoked);
 
-            if (refreshTokenRow is not null)
+            foreach (var row in refreshTokenRows)
             {
-                refreshTokenRow.Revoked = true;
-                await _userDbContext.SaveChangesAsync();
+                row.Revoked = true;
             }
+
+            await _userDbContext.SaveChangesAsync();
         }
     }
-
 }
