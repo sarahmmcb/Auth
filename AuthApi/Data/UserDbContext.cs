@@ -22,7 +22,11 @@ namespace AuthApi.Data
         {
             modelBuilder.HasDefaultSchema("core");
 
-            modelBuilder.Entity<RefreshToken>().HasKey(i => i.Id);
+            modelBuilder.Entity<RefreshToken>(rt => {
+                rt.HasKey(i => i.Id);
+                rt.HasIndex(i => i.UserName);
+            });
+            
             modelBuilder.Entity<Role>(r => {
                 r.Property(i => i.RoleName).IsRequired();
                 r.HasKey(i => i.Id);
@@ -73,6 +77,7 @@ namespace AuthApi.Data
                 u.Property(i => i.IsDeleted).IsRequired().HasDefaultValue(false);
             });
 
+            // Seed Data - TODO: Consider moving this to a stored proc
             modelBuilder.Entity<Role>().HasData(
                 new Role { Id = 1, RoleName = "Admin"}
              );
@@ -118,7 +123,7 @@ namespace AuthApi.Data
             var modifiedEntries = ChangeTracker.Entries<User>()
                 .Where(e => e.State == EntityState.Modified || e.State == EntityState.Deleted || e.State == EntityState.Added).ToList();
 
-            await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false); // TODO: check if it's necessary to do this here in order for CurrentValue to have the updated value below
 
             foreach (var entry in modifiedEntries)
             {

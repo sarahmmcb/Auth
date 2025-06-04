@@ -4,14 +4,15 @@ using AuthApi.Security;
 using Auth.Contracts;
 using AuthApi.Helpers;
 using System.Security.Cryptography;
+using System.Security.Claims;
 
 namespace AuthApi.Logic
 {
     public interface ISessionService
     {
         Task<(string, string)> Login(string userName, string password);
-
-        Task<(string, string)> RefreshAccessToken(int userId, string refreshToken);
+        Task<(string, string)> RefreshAccessToken(string userName, string refreshToken);
+        Task Logout(IEnumerable<Claim> claims);
     }
 
     public class SessionService(UserDbContext _userDbContext) : ISessionService
@@ -26,7 +27,7 @@ namespace AuthApi.Logic
 
             if (user is null || !PasswordManager.VerifyPassword(password, user.Password))
             {
-                throw new ApplicationException("Username or Password is incorrect");
+                throw new UnauthorizedAccessException("Username or Password is incorrect");
             }
 
             var token = TokenManager.GenerateToken(user) ?? throw new ApplicationException("An error ocurred");
@@ -39,22 +40,22 @@ namespace AuthApi.Logic
             return (token, refreshTokenEntity.Token);
         }
 
-        public async Task<(string, string)> RefreshAccessToken(int userId, string refreshToken)
+        public async Task<(string, string)> RefreshAccessToken(string userName, string refreshToken)
         {
             var storedToken = await _userDbContext.RefreshToken
-                .Where(u => u.UserId == userId && string.Equals(u.Token, refreshToken)).FirstOrDefaultAsync();
+                .Where(u => string.Equals(u.UserName, userName) && string.Equals(u.Token, refreshToken)).FirstOrDefaultAsync();
 
             var user = await _userDbContext.User
                 .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
-                .Where(u => u.Id == userId)
+                .Where(u => u.UserName == userName)
                 .FirstOrDefaultAsync();
 
             if (storedToken is null ||
                 storedToken.Revoked ||
                 storedToken.Expires < DateTimeOffset.UtcNow)
             {
-                throw new ApplicationException("Please log in again");
+                throw new UnauthorizedAccessException("Please log in again");
             }
 
             storedToken.Revoked = true;
@@ -67,6 +68,19 @@ namespace AuthApi.Logic
             await _userDbContext.SaveChangesAsync();
 
             return (token, refreshTokenEntity.Token);
+        }
+
+        public async Task Logout(IEnumerable<Claim> claims)
+        {
+            var userName = claims.Where(c => c.Type == ClaimTypes.Name).FirstOrDefault() ?? throw new ApplicationException("Username was null");
+
+            var refreshTokenRow = _userDbContext.RefreshToken.Where(t => t.UserName.Equals(userName)).FirstOrDefault();
+
+            if (refreshTokenRow is not null)
+            {
+                refreshTokenRow.Revoked = true;
+                await _userDbContext.SaveChangesAsync();
+            }
         }
     }
 
