@@ -4,7 +4,7 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using Auth.Contracts;
 using AuthApi.Helpers;
-using AuthApi.Data;
+using NuGet.Packaging;
 
 namespace AuthApi.Security
 {
@@ -13,11 +13,11 @@ namespace AuthApi.Security
         public static string? GenerateToken(User user)
         {
             var config = ConfigurationHelper.Section("JwtConfig");
-            var secret = config["Secret"];
-            var issuer = config["ValidIssuer"];
-            var audience = config["ValidAudiences"];
+            var secret = config.GetValue<string>("Secret");
+            var issuer = config.GetValue<string>("ValidIssuer");
+            var audiences = config.GetSection("ValidAudiences").Get<List<string>>();
 
-            if (secret is null || issuer is null || audience is null)
+            if (secret is null || issuer is null || audiences is null)
             {
                 throw new ApplicationException("Jwt is not set in configuration");
             }
@@ -32,9 +32,10 @@ namespace AuthApi.Security
                 }),
                 Expires = DateTime.UtcNow.AddDays(1),
                 Issuer = issuer,
-                Audience = audience,
                 SigningCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256Signature)
             };
+
+            tokenDescriptor.Audiences.AddRange(audiences);
 
             var claimsToAdd = new List<Claim>();
 
@@ -59,7 +60,7 @@ namespace AuthApi.Security
             var refreshTokenEntity = new RefreshToken
             {
                 Token = refreshToken,
-                UserId = user.Id,
+                UserName = user.UserName,
                 Expires = DateTimeOffset.UtcNow.AddSeconds(int.Parse(ConfigurationHelper.Setting("RefreshTokenExpirySeconds"))),
                 Revoked = false
             };

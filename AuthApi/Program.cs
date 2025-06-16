@@ -20,9 +20,10 @@ builder.Services.AddDbContext<UserDbContext>(options =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        var secret = builder.Configuration["JwtConfig:Secret"];
-        var issuer = builder.Configuration["JwtConfig:ValidIssuer"];
-        var audience = builder.Configuration["JwtConfig:ValidAudiences"];
+        var jwtConfig = builder.Configuration.GetSection("JwtConfig");
+        var secret = jwtConfig.GetSection("Secret").Value;
+        var issuer = jwtConfig.GetSection("ValidIssuer").Value;
+        var audience = jwtConfig.GetSection("ValidAudiences").Get<List<string>>();
 
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
 
@@ -33,7 +34,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             ValidIssuer = issuer,
-            ValidAudience = audience,
+            ValidAudiences = audience,
             IssuerSigningKey = signingKey
         };
     });

@@ -2,7 +2,7 @@
 using Auth.Contracts.RequestContracts;
 using AuthApi.Logic;
 using Auth.Contracts.ResponseContracts;
-using Azure.Core;
+using Microsoft.AspNetCore.Authorization;
 
 namespace AuthApi.Controllers
 {
@@ -56,7 +56,7 @@ namespace AuthApi.Controllers
 
             try
             {
-                var (token, refreshToken) = await _sessionService.RefreshAccessToken(request.UserId, request.RefreshToken).ConfigureAwait(false);
+                var (token, refreshToken) = await _sessionService.RefreshAccessToken(request.UserName, request.RefreshToken).ConfigureAwait(false);
 
                 var cookieOptions = new CookieOptions
                 {
@@ -78,6 +78,25 @@ namespace AuthApi.Controllers
             {
                 return Problem("An internal error occurred", statusCode: 500);
             }
+        }
+
+        [HttpPost]
+        [Route("logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout()
+        {
+            var user = HttpContext.User;
+
+            try
+            {
+                await _sessionService.Logout(user.Claims);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+
+            return Ok();
         }
     }
 }
