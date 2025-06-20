@@ -11,9 +11,6 @@ using AuthApi.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// builder.Services.AddDataProtection(); Might need later for cookies or password reset tokens
-
 builder.Services.AddDbContext<UserDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
@@ -81,6 +78,11 @@ builder.Services.AddTransient<ISessionService, SessionService>();
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, LocalAuthMiddleware>();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    DbInitializer.Seed(scope.ServiceProvider);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

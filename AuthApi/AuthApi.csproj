@@ -1,10 +1,22 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="StoredProcedures\core.AuthApi_Login.sql" />
+    <None Remove="StoredProcedures\core.Drop.sql" />
+    <None Remove="StoredProcedures\core.User_By_UserName_S.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="StoredProcedures\core.AuthApi_Login.sql" />
+    <EmbeddedResource Include="StoredProcedures\core.Drop.sql" />
+    <EmbeddedResource Include="StoredProcedures\core.User_By_UserName_S.sql" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
