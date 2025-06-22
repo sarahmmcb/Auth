@@ -12,6 +12,6 @@ namespace Auth.Contracts
         public AccountStatus AccountStatus { get; set; }
         public DateTimeOffset CreateDate { get; set; }
 
-        public ICollection<UserRole> UserRoles { get; set; }
+        internal ICollection<UserRole> UserRoles { get; set; }
     }
 }
