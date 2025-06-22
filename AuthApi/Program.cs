@@ -9,7 +9,22 @@ using AuthApi.Logic;
 using Microsoft.AspNetCore.Authorization;
 using AuthApi.Security;
 
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      policy =>
+                      {
+                          policy.WithOrigins("http://localhost:4200")  // Replace with your frontend URL
+                          .AllowAnyHeader()
+                          .AllowAnyMethod();
+                          //policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                      });
+
+
+});
 
 builder.Services.AddDbContext<UserDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
@@ -94,6 +109,8 @@ if (app.Environment.IsDevelopment())
 ConfigurationHelper.Initialize(app.Services.GetRequiredService<IConfiguration>());
 
 app.UseHttpsRedirection();
+
+app.UseCors(MyAllowSpecificOrigins);
 
 app.UseAuthentication();
 app.UseAuthorization();
