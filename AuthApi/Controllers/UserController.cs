@@ -10,7 +10,7 @@ namespace AuthApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Policy = "RequireAdmin")]
+    [Authorize()]
     public class UserController : ControllerBase
     {
         private readonly UserDbContext _context;
@@ -24,6 +24,7 @@ namespace AuthApi.Controllers
 
         // GET: api/User
         [HttpGet]
+        [Route("all")]
         public async Task<ActionResult<IEnumerable<User>>> GetUser()
         {
             return await _context.User.ToListAsync();
@@ -39,6 +40,23 @@ namespace AuthApi.Controllers
             {
                 return NotFound();
             }
+
+            user.Password = "";
+
+            return user;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<User>> GetUser([FromQuery] string username)
+        {
+            var user = await _context.User.FirstOrDefaultAsync(u => string.Equals(u.UserName, username));
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            user.Password = "";
 
             return user;
         }
