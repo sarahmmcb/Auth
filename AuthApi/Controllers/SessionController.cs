@@ -39,6 +39,10 @@ namespace AuthApi.Controllers
             {
                 return BadRequest(ex.Message);
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized("Username or Password is incorrect");
+            }
             catch(Exception ex)
             {
                 return Problem("An internal error occurred", statusCode: 500);
