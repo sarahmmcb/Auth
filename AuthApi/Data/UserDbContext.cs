@@ -22,6 +22,15 @@ namespace AuthApi.Data
         {
             modelBuilder.HasDefaultSchema("core");
 
+            modelBuilder.Entity<VerificationCode>(vc => {
+                vc.HasKey(i => i.Id);
+                vc.HasIndex(i => i.UserId);
+
+                vc.HasOne(i => i.user)
+                .WithMany(u => u.VerificationCodes)
+                .HasForeignKey(u => u.UserId);
+            });
+
             modelBuilder.Entity<RefreshToken>(rt => {
                 rt.HasKey(i => i.Id);
                 rt.HasIndex(i => i.UserName);

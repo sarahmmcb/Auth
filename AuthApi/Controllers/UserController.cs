@@ -10,16 +10,18 @@ namespace AuthApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize()]
+    [Authorize]
     public class UserController : ControllerBase
     {
         private readonly UserDbContext _context;
         private readonly IUserService _userService;
+        private readonly IVerificationCodeService _verificationCodeService;
 
-        public UserController(UserDbContext context, IUserService userService)
+        public UserController(UserDbContext context, IUserService userService, IVerificationCodeService verification)
         {
             _context = context;
             _userService = userService;
+            _verificationCodeService = verification;
         }
 
         // GET: api/User
@@ -101,7 +103,7 @@ namespace AuthApi.Controllers
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         [AllowAnonymous]
-        public async Task<IActionResult> RegisterUser(UpdateUserRequest user)
+        public async Task<IActionResult> Register(UpdateUserRequest user)
         {
             if (ModelState.IsValid)
             {
@@ -138,6 +140,22 @@ namespace AuthApi.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        [HttpPost("sendCode")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SendVerificationCode([FromQuery] string email)
+        {
+            var sendSuccess = await _verificationCodeService.SendVerificationCodeByEmail(email).ConfigureAwait(false);
+
+            if (sendSuccess)
+            {
+                return Ok();
+            }
+            else
+            {
+                return BadRequest();
+            }
         }
 
         private bool UserExists(int id)

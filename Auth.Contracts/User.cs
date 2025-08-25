@@ -13,5 +13,6 @@ namespace Auth.Contracts
         public DateTimeOffset CreateDate { get; set; }
 
         internal ICollection<UserRole> UserRoles { get; set; }
+        internal ICollection<VerificationCode> VerificationCodes { get; set; }
     }
 }
