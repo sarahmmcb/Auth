@@ -10,7 +10,9 @@ namespace AuthApi.Logic
     public interface IVerificationCodeService
     {
         Task<bool> SendVerificationCodeByEmail(string email);
+        Task<bool> ValidateVerificationCode(string email, string code);
     }
+
     public class VerificationCodeService : IVerificationCodeService
     {
         private readonly SmtpSettings _smtpSettings;
@@ -55,10 +57,40 @@ namespace AuthApi.Logic
             return result;
         }
 
-        public static int GenerateVerificationCode()
+        public async Task<bool> ValidateVerificationCode(string email, string code)
         {
+            var user = await _userDbContext.User.FirstOrDefaultAsync(u => string.Equals(u.UserName, email));
+
+            if (user is null)
+            {
+                return false;
+            }
+
+            var verificationCode = await _userDbContext.VerificationCode
+                .FirstOrDefaultAsync(vc => vc.UserId == user.Id && vc.Code.Equals(code));
+
+            if (verificationCode is null || verificationCode.ExpirationDate < DateTime.UtcNow)
+            {
+                return false;
+            }
+
+            _userDbContext.Remove(verificationCode);
+            await _userDbContext.SaveChangesAsync();
+
+            return true;
+        }
+
+        public static string GenerateVerificationCode()
+        {
+            var code = "";
             var random = new Random();
-            return random.Next(10000, 1000000);
+
+            for (int i = 0; i < 6; i++)
+            {
+                code += random.Next(0, 10);
+            }
+
+            return code;
         }
     }
 }

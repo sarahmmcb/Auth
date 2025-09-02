@@ -11,6 +11,7 @@ namespace AuthApi.Data
         public DbSet<RefreshToken> RefreshToken => Set<RefreshToken>();
         public DbSet<Role> Role => Set<Role>();
         public DbSet<UserRole> UserRoles => Set<UserRole>();
+        public DbSet<VerificationCode> VerificationCode => Set<VerificationCode>();
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

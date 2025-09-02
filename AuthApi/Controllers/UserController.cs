@@ -158,6 +158,24 @@ namespace AuthApi.Controllers
             }
         }
 
+        [HttpPost("validateCode")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ValidateVerificationCode([FromQuery] string email, [FromQuery] string code)
+        {
+            // This needs to return a short-term toke upon success for resetting the password
+            var validateSuccess = await _verificationCodeService.ValidateVerificationCode(email, code);
+
+            if (validateSuccess)
+            {
+                return Ok();
+            }
+            else
+            {
+                return BadRequest();
+            }
+
+        }
+
         private bool UserExists(int id)
         {
             return _context.User.Any(e => string.Equals(e.Id,id));
