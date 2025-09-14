@@ -1,16 +1,18 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.IdentityModel.Tokens;
 using Auth.Contracts;
+using AuthApi.Data;
 using AuthApi.Helpers;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using NuGet.Packaging;
 
 namespace AuthApi.Security
 {
     public static class TokenManager
     {
-        public static string? GenerateToken(User user)
+        public static async Task<string?> GenerateToken(User user, UserDbContext _context, int expMin = 1440)
         {
             var config = ConfigurationHelper.Section("JwtConfig");
             var secret = config.GetValue<string>("Secret");
@@ -30,7 +32,7 @@ namespace AuthApi.Security
                 {
                     new Claim(ClaimTypes.Name, user.UserName)
                 }),
-                Expires = DateTime.UtcNow.AddDays(1),
+                Expires = DateTime.UtcNow.AddMinutes(expMin),
                 Issuer = issuer,
                 SigningCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256Signature)
             };
@@ -39,8 +41,13 @@ namespace AuthApi.Security
 
             var claimsToAdd = new List<Claim>();
 
-            foreach (var userRole in user.UserRoles)
+            var userRoles = user.UserRoles ?? await _context.UserRoles.Include(ur => ur.Role).Where(ur => ur.UserId == user.Id).ToListAsync();
+
+            foreach (var userRole in userRoles)
             {
+                if (userRole.Role is null)
+                    continue;
+
                 var roleName = userRole.Role.RoleName;
                 claimsToAdd.Add(new Claim(ClaimTypes.Role, roleName));
             }

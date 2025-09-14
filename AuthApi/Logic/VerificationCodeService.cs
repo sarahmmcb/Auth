@@ -4,13 +4,14 @@ using AuthApi.Models;
 using Auth.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AuthApi.Security;
 
 namespace AuthApi.Logic
 {
     public interface IVerificationCodeService
     {
         Task<bool> SendVerificationCodeByEmail(string email);
-        Task<bool> ValidateVerificationCode(string email, string code);
+        Task<string> ValidateVerificationCode(string email, string code);
     }
 
     public class VerificationCodeService : IVerificationCodeService
@@ -45,6 +46,7 @@ namespace AuthApi.Logic
             };
 
             await _userDbContext.AddAsync(verificationCode);
+            await _userDbContext.SaveChangesAsync();
 
             var result = await _emailManager.SendEmail(
                                 _smtpSettings.FromEmail,
@@ -57,13 +59,17 @@ namespace AuthApi.Logic
             return result;
         }
 
-        public async Task<bool> ValidateVerificationCode(string email, string code)
+        public async Task<string> ValidateVerificationCode(string email, string code)
         {
-            var user = await _userDbContext.User.FirstOrDefaultAsync(u => string.Equals(u.UserName, email));
+            var user = await _userDbContext.User
+                //.Include(u => u.UserRoles)
+                //.ThenInclude(ur => ur.Role)
+                .Where(u => string.Equals(u.UserName, email))
+                .FirstOrDefaultAsync();
 
             if (user is null)
             {
-                return false;
+                throw new ApplicationException("An error occurred");
             }
 
             var verificationCode = await _userDbContext.VerificationCode
@@ -71,13 +77,15 @@ namespace AuthApi.Logic
 
             if (verificationCode is null || verificationCode.ExpirationDate < DateTime.UtcNow)
             {
-                return false;
+                throw new ApplicationException("Verification code incorrect, please try again");
             }
 
             _userDbContext.Remove(verificationCode);
             await _userDbContext.SaveChangesAsync();
 
-            return true;
+            var tempToken = await TokenManager.GenerateToken(user, _userDbContext, 5) ?? throw new ApplicationException("An error occurred");
+
+            return tempToken;
         }
 
         public static string GenerateVerificationCode()
@@ -94,3 +102,4 @@ namespace AuthApi.Logic
         }
     }
 }
+

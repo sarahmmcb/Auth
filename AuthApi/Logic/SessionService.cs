@@ -27,7 +27,7 @@ namespace AuthApi.Logic
                 throw new UnauthorizedAccessException("Username or Password is incorrect");
             }
 
-            var token = TokenManager.GenerateToken(user) ?? throw new ApplicationException("An error ocurred");
+            var token = await TokenManager.GenerateToken(user, _userDbContext) ?? throw new ApplicationException("An error ocurred");
 
             var refreshTokenEntity = TokenManager.GenerateRefreshToken(user);
 
@@ -57,7 +57,7 @@ namespace AuthApi.Logic
 
             storedToken.Revoked = true;
 
-            var token = TokenManager.GenerateToken(user) ?? throw new ApplicationException("An error ocurred");
+            var token = await TokenManager.GenerateToken(user, _userDbContext) ?? throw new ApplicationException("An error ocurred");
 
             var refreshTokenEntity = TokenManager.GenerateRefreshToken(user);
 

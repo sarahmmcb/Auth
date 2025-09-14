@@ -8,6 +8,7 @@ namespace AuthApi.Logic
     public interface IUserService
     {
         Task RegisterUser(UpdateUserRequest user);
+        Task UpdatePassword(UpdatePasswordRequest user);
     }
 
     public class UserService(UserDbContext _userDbContext) : IUserService
@@ -22,6 +23,19 @@ namespace AuthApi.Logic
             // TODO: these saves should be in a transaction
             await SaveNewUser(user);
             await SaveUserRoles(user);
+        }
+
+        public async Task UpdatePassword(UpdatePasswordRequest request)
+        {
+            var user = _userDbContext.User.Where(u => u.Email == request.Email).FirstOrDefault();
+
+            if (user is null)
+            {
+                throw new ApplicationException("User invalid");
+            }
+
+            user.Password = PasswordManager.HashPassword(request.Password);
+            await _userDbContext.SaveChangesAsync();
         }
 
         internal virtual async Task SaveNewUser(UpdateUserRequest user)

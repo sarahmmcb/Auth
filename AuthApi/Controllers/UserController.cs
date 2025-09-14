@@ -1,10 +1,12 @@
+using Auth.Contracts;
+using Auth.Contracts.RequestContracts;
+using Auth.Contracts.ResponseContracts;
+using AuthApi.Data;
+using AuthApi.Logic;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Auth.Contracts;
-using AuthApi.Data;
-using Auth.Contracts.RequestContracts;
-using Microsoft.AspNetCore.Authorization;
-using AuthApi.Logic;
 
 namespace AuthApi.Controllers
 {
@@ -162,18 +164,22 @@ namespace AuthApi.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> ValidateVerificationCode([FromQuery] string email, [FromQuery] string code)
         {
-            // This needs to return a short-term toke upon success for resetting the password
-            var validateSuccess = await _verificationCodeService.ValidateVerificationCode(email, code);
+            var token = await _verificationCodeService.ValidateVerificationCode(email, code);
 
-            if (validateSuccess)
-            {
-                return Ok();
-            }
-            else
+            return Ok(new TokenResponse { Token = token });
+        }
+
+        [HttpPost("resetPassword")]
+        public async Task<IActionResult> ResetPassword([FromBody] UpdatePasswordRequest request)
+        {
+            if (!ModelState.IsValid)
             {
                 return BadRequest();
             }
 
+            await _userService.UpdatePassword(request).ConfigureAwait(false);
+
+            return Ok("Password updated successfully");
         }
 
         private bool UserExists(int id)
