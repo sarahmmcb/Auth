@@ -8,9 +8,16 @@ using Microsoft.OpenApi.Models;
 using AuthApi.Logic;
 using Microsoft.AspNetCore.Authorization;
 using AuthApi.Security;
+using AuthApi.Models;
+using AuthApi.Email;
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 var builder = WebApplication.CreateBuilder(args);
+
+var configuration = builder.Configuration;
+
+builder.Services.Configure<SmtpSettings>(
+    configuration.GetSection("SmtpSettings"));
 
 builder.Services.AddCors(options =>
 {
@@ -90,6 +97,8 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<ISessionService, SessionService>();
+builder.Services.AddTransient<IVerificationCodeService, VerificationCodeService>();
+builder.Services.AddSingleton<EmailManager>();
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, LocalAuthMiddleware>();
 
 var app = builder.Build();

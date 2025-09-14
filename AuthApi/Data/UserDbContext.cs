@@ -11,6 +11,7 @@ namespace AuthApi.Data
         public DbSet<RefreshToken> RefreshToken => Set<RefreshToken>();
         public DbSet<Role> Role => Set<Role>();
         public DbSet<UserRole> UserRoles => Set<UserRole>();
+        public DbSet<VerificationCode> VerificationCode => Set<VerificationCode>();
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -21,6 +22,15 @@ namespace AuthApi.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.HasDefaultSchema("core");
+
+            modelBuilder.Entity<VerificationCode>(vc => {
+                vc.HasKey(i => i.Id);
+                vc.HasIndex(i => i.UserId);
+
+                vc.HasOne(i => i.user)
+                .WithMany(u => u.VerificationCodes)
+                .HasForeignKey(u => u.UserId);
+            });
 
             modelBuilder.Entity<RefreshToken>(rt => {
                 rt.HasKey(i => i.Id);

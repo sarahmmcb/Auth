@@ -1,25 +1,29 @@
+using Auth.Contracts;
+using Auth.Contracts.RequestContracts;
+using Auth.Contracts.ResponseContracts;
+using AuthApi.Data;
+using AuthApi.Logic;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Auth.Contracts;
-using AuthApi.Data;
-using Auth.Contracts.RequestContracts;
-using Microsoft.AspNetCore.Authorization;
-using AuthApi.Logic;
 
 namespace AuthApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize()]
+    [Authorize]
     public class UserController : ControllerBase
     {
         private readonly UserDbContext _context;
         private readonly IUserService _userService;
+        private readonly IVerificationCodeService _verificationCodeService;
 
-        public UserController(UserDbContext context, IUserService userService)
+        public UserController(UserDbContext context, IUserService userService, IVerificationCodeService verification)
         {
             _context = context;
             _userService = userService;
+            _verificationCodeService = verification;
         }
 
         // GET: api/User
@@ -101,7 +105,7 @@ namespace AuthApi.Controllers
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         [AllowAnonymous]
-        public async Task<IActionResult> RegisterUser(UpdateUserRequest user)
+        public async Task<IActionResult> Register(UpdateUserRequest user)
         {
             if (ModelState.IsValid)
             {
@@ -138,6 +142,44 @@ namespace AuthApi.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        [HttpPost("sendCode")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SendVerificationCode([FromQuery] string email)
+        {
+            var sendSuccess = await _verificationCodeService.SendVerificationCodeByEmail(email).ConfigureAwait(false);
+
+            if (sendSuccess)
+            {
+                return Ok();
+            }
+            else
+            {
+                return BadRequest();
+            }
+        }
+
+        [HttpPost("validateCode")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ValidateVerificationCode([FromQuery] string email, [FromQuery] string code)
+        {
+            var token = await _verificationCodeService.ValidateVerificationCode(email, code);
+
+            return Ok(new TokenResponse { Token = token });
+        }
+
+        [HttpPost("resetPassword")]
+        public async Task<IActionResult> ResetPassword([FromBody] UpdatePasswordRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            await _userService.UpdatePassword(request).ConfigureAwait(false);
+
+            return Ok("Password updated successfully");
         }
 
         private bool UserExists(int id)
