@@ -23,15 +23,7 @@ namespace AuthApi.Controllers
             {
                 var (token, refreshToken) = await _sessionService.Login(request.UserName, request.Password).ConfigureAwait(false);
 
-                var cookieOptions = new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = true,
-                    SameSite = SameSiteMode.Strict,
-                    Expires = DateTime.UtcNow.AddDays(7)
-                };
-
-                Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
+                SetCookies(refreshToken, request.UserName);
 
                 return Ok(new TokenResponse { Token = token });
             }
@@ -49,9 +41,9 @@ namespace AuthApi.Controllers
             }
         }
 
-        [HttpPost]
+        [HttpGet]
         [Route("refresh")]
-        public async Task<IActionResult> Refresh(RefreshRequest request)
+        public async Task<IActionResult> Refresh()
         {
             if (!ModelState.IsValid)
             {
@@ -60,19 +52,18 @@ namespace AuthApi.Controllers
 
             try
             {
-                var (token, refreshToken) = await _sessionService.RefreshAccessToken(request.UserName, request.RefreshToken).ConfigureAwait(false);
+                HttpContext.Request.Cookies.TryGetValue("refreshToken", out var refreshToken);
+                HttpContext.Request.Cookies.TryGetValue("userName", out var userName);
 
-                var cookieOptions = new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = true,
-                    SameSite = SameSiteMode.Strict,
-                    Expires = DateTime.UtcNow.AddDays(7)
-                };
+                var (token, newRefreshToken) = await _sessionService.RefreshAccessToken(userName, refreshToken).ConfigureAwait(false);
 
-                Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
+                SetCookies(newRefreshToken, userName);
 
                 return Ok(new TokenResponse { Token = token });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(ex.Message);
             }
             catch (ApplicationException ex)
             {
@@ -101,6 +92,32 @@ namespace AuthApi.Controllers
             }
 
             return Ok();
+        }
+
+        private void SetCookies(string newRefreshToken, string userName)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                Domain = "localhost",
+                SameSite = SameSiteMode.None,
+                Expires = DateTime.UtcNow.AddDays(7)
+            };
+
+            Response.Cookies.Append("refreshToken", newRefreshToken, cookieOptions);
+
+            // return username in cookie for auto-auth on front end refresh
+            var usernameCookieOptions = new CookieOptions
+            {
+                HttpOnly = false,
+                Secure = true,
+                Domain = "localhost",
+                SameSite = SameSiteMode.None,
+                Expires = DateTimeOffset.MaxValue
+            };
+
+            Response.Cookies.Append("userName", userName, usernameCookieOptions);
         }
     }
 }

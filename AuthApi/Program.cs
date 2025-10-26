@@ -19,6 +19,7 @@ var configuration = builder.Configuration;
 builder.Services.Configure<SmtpSettings>(
     configuration.GetSection("SmtpSettings"));
 
+builder.Services.AddControllers();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: MyAllowSpecificOrigins,
@@ -26,7 +27,8 @@ builder.Services.AddCors(options =>
                       {
                           policy.WithOrigins("http://localhost:4200")  // Replace with your frontend URL
                           .AllowAnyHeader()
-                          .AllowAnyMethod();
+                          .AllowAnyMethod()
+                          .AllowCredentials();
                           //policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
                       });
 
@@ -64,11 +66,12 @@ builder.Services.AddAuthorization(options =>
          policy => policy.RequireRole("Admin"));
 });
 
-builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
+    options.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
+
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -112,7 +115,11 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
+        options.RoutePrefix = string.Empty;
+    });
 }
 
 ConfigurationHelper.Initialize(app.Services.GetRequiredService<IConfiguration>());
