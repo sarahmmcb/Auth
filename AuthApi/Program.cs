@@ -1,20 +1,24 @@
-using Microsoft.EntityFrameworkCore;
-using AuthApi.Data;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using AuthApi.Helpers;
-using Microsoft.OpenApi.Models;
-using AuthApi.Logic;
-using Microsoft.AspNetCore.Authorization;
-using AuthApi.Security;
-using AuthApi.Models;
+using AuthApi.Data;
 using AuthApi.Email;
+using AuthApi.Helpers;
+using AuthApi.Logging;
+using AuthApi.Logic;
+using AuthApi.Models;
+using AuthApi.Security;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpLogging;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 var builder = WebApplication.CreateBuilder(args);
 
 var configuration = builder.Configuration;
+
+builder.Services.AddLogging();
 
 builder.Services.Configure<SmtpSettings>(
     configuration.GetSection("SmtpSettings"));
@@ -125,12 +129,12 @@ if (app.Environment.IsDevelopment())
 ConfigurationHelper.Initialize(app.Services.GetRequiredService<IConfiguration>());
 
 app.UseHttpsRedirection();
+app.UseCustomHttpLogging();
 
 app.UseCors(MyAllowSpecificOrigins);
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
