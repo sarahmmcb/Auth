@@ -8,7 +8,7 @@ namespace AuthApi.Logging
             Action<HttpLoggingOptions> configureOptions = null)
         {
            var options = new HttpLoggingOptions();
-            configureOptions?.Invoke(options);
+           configureOptions?.Invoke(options);
 
            return app.UseMiddleware<HttpLoggingMiddleware>(options);
         }

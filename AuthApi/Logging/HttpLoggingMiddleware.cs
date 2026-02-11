@@ -1,4 +1,6 @@
 ﻿using System.Text;
+using System.Text.RegularExpressions;
+using Azure;
 
 namespace AuthApi.Logging
 {
@@ -82,14 +84,15 @@ namespace AuthApi.Logging
                 leaveOpen: true);
 
             var requestBody = await streamReader.ReadToEndAsync();
+            // Reset the position so it can be read again by other logic
+            context.Request.Body.Seek(0, SeekOrigin.Begin);
 
             if (Encoding.UTF8.GetBytes(requestBody).Length > _options.MaxBodySize)
             {
                 requestBody = TruncateMessage(requestBody);
             }
 
-            // Reset the position so it can be read again by other logic
-            context.Request.Body.Position = 0;
+            requestBody = RedactJson(requestBody, context.Request.ContentType);
 
             return requestBody;
         }
@@ -105,6 +108,8 @@ namespace AuthApi.Logging
                 responseBody = TruncateMessage(responseBody);
             }
 
+            responseBody = RedactJson(responseBody, response.ContentType);
+
             return responseBody;
         }
 
@@ -117,17 +122,38 @@ namespace AuthApi.Logging
         private void LogRequest(HttpContext context, string requestBody)
         {
             _logger.LogInformation(
-                $"HTTP {context.Request.Method} {context.Request.Path} " +
+                $"HTTP {context.Request.Method} {context.Request.Path}\n" +
                 $"received at {DateTime.UtcNow}\n" +
-                $"Request Body: {requestBody}");
+                $"Request Body: {requestBody}"
+            );
         }
 
         private void LogResponse(HttpContext context, string responseBody)
         {
             _logger.LogInformation(
-                $"HTTP {context.Response.StatusCode} returned for {context.Request.Method}" +
-                $" Path: {context.Request.Path}\n" +
-                $"Response Body: {responseBody}");
+                $"HTTP {context.Response.StatusCode} returned for {context.Request.Method}\n" +
+                $"Path: {context.Request.Path}\n" +
+                $"Response Body: {responseBody}"
+            );
+        }
+
+        private string RedactJson(string content, string? contentType)
+        {
+            if (contentType?.Contains("json") == true && !string.IsNullOrEmpty(content))
+            {
+                try
+                {
+                    // TODO: Use a JSON parser for a more robust solution
+                    content = Regex.Replace(content, "\"password\":\\s*\"[^\"]*\"", "\"password\":\"[REDACTED]\"", RegexOptions.IgnoreCase);
+                    content = Regex.Replace(content, "\"token\":\\s*\"[^\"]*\"", "\"token\":\"[REDACTED]\"", RegexOptions.IgnoreCase);
+                }
+                catch
+                {
+                    return "[Content contained sensitive data - redaction failed]";
+                }
+            }
+
+            return content;
         }
     }
 }
