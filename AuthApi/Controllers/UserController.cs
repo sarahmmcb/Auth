@@ -4,9 +4,9 @@ using Auth.Contracts.ResponseContracts;
 using AuthApi.Data;
 using AuthApi.Logic;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 
 namespace AuthApi.Controllers
 {
@@ -18,15 +18,20 @@ namespace AuthApi.Controllers
         private readonly UserDbContext _context;
         private readonly IUserService _userService;
         private readonly IVerificationCodeService _verificationCodeService;
+        private ILogger<UserController> _logger;
 
-        public UserController(UserDbContext context, IUserService userService, IVerificationCodeService verification)
+        public UserController(
+            UserDbContext context,
+            IUserService userService,
+            IVerificationCodeService verification,
+            ILogger<UserController> logger)
         {
             _context = context;
             _userService = userService;
             _verificationCodeService = verification;
+            _logger = logger;
         }
 
-        // GET: api/User
         [HttpGet]
         [Route("all")]
         public async Task<ActionResult<IEnumerable<User>>> GetUser()
@@ -34,7 +39,6 @@ namespace AuthApi.Controllers
             return await _context.User.ToListAsync();
         }
 
-        // GET: api/User/5
         [HttpGet("{id}")]
         public async Task<ActionResult<User>> GetUser(int id)
         {
@@ -42,6 +46,7 @@ namespace AuthApi.Controllers
 
             if (user == null)
             {
+                _logger.LogInformation($"GET: User not found with id: {id}");
                 return NotFound();
             }
 
@@ -57,6 +62,7 @@ namespace AuthApi.Controllers
 
             if (user == null)
             {
+                _logger.LogInformation($"GET: User not found with username: {username}");
                 return NotFound();
             }
 
@@ -65,8 +71,6 @@ namespace AuthApi.Controllers
             return user;
         }
 
-        // PUT: api/User/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutUser(int id, UpdateUserRequest user)
         {
@@ -78,6 +82,7 @@ namespace AuthApi.Controllers
             var userToUpdate = await _context.User.FindAsync(id);
             if (userToUpdate == null)
             {
+                _logger.LogWarning($"PUT: User not found with id: {id}");
                 return NotFound();
             }
 
@@ -87,16 +92,10 @@ namespace AuthApi.Controllers
             {
                 await _context.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException ex)
             {
-                if (!UserExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                _logger.LogError($"Update User (Id: {id}) Concurrency Exception: {ex.Message}");
+                return Problem("An internal error occurred, please try again later", statusCode: (int)HttpStatusCode.InternalServerError);
             }
 
             return NoContent();
@@ -113,12 +112,14 @@ namespace AuthApi.Controllers
                 {
                     await _userService.RegisterUser(user).ConfigureAwait(false);
                 }
-                catch (ApplicationException appEx)
+                catch (ApplicationException ex)
                 {
-                    return BadRequest(appEx.Message);
+                    _logger.LogError($"Application Exception on register for username {user.Username}: {ex.Message}");
+                    return BadRequest(ex.Message);
                 }
                 catch (Exception ex)
                 {
+                    _logger.LogError($"Error on register for username {user.Username}: {ex.Message}");
                     return StatusCode(500, "An Internal Error occurred");
                 }
 
@@ -128,13 +129,13 @@ namespace AuthApi.Controllers
             return BadRequest("The request was invalid");
         }
 
-        // DELETE: api/User/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
             var user = await _context.User.FindAsync(id);
             if (user == null)
             {
+                _logger.LogWarning($"DELETE: User not found with id: {id}");
                 return NotFound();
             }
 
@@ -156,7 +157,8 @@ namespace AuthApi.Controllers
             }
             else
             {
-                return BadRequest();
+                _logger.LogError($"Error sending verificaiton code to {email}");
+                return Problem("There was a problem sending the verification code. Please check the email address and try again.");
             }
         }
 
@@ -180,11 +182,6 @@ namespace AuthApi.Controllers
             await _userService.UpdatePassword(request).ConfigureAwait(false);
 
             return Ok("Password updated successfully");
-        }
-
-        private bool UserExists(int id)
-        {
-            return _context.User.Any(e => string.Equals(e.Id,id));
         }
     }
 }
