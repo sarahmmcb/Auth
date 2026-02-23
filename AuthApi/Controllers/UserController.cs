@@ -2,6 +2,7 @@ using Auth.Contracts;
 using Auth.Contracts.RequestContracts;
 using Auth.Contracts.ResponseContracts;
 using AuthApi.Data;
+using AuthApi.Logging;
 using AuthApi.Logic;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,18 +19,15 @@ namespace AuthApi.Controllers
         private readonly UserDbContext _context;
         private readonly IUserService _userService;
         private readonly IVerificationCodeService _verificationCodeService;
-        private ILogger<UserController> _logger;
 
         public UserController(
             UserDbContext context,
             IUserService userService,
-            IVerificationCodeService verification,
-            ILogger<UserController> logger)
+            IVerificationCodeService verification)
         {
             _context = context;
             _userService = userService;
             _verificationCodeService = verification;
-            _logger = logger;
         }
 
         [HttpGet]
@@ -46,7 +44,7 @@ namespace AuthApi.Controllers
 
             if (user == null)
             {
-                _logger.LogInformation($"GET: User not found with id: {id}");
+                AuthLogger.LogInformation<UserController>($"GET: User not found with id: {id}");
                 return NotFound();
             }
 
@@ -62,7 +60,7 @@ namespace AuthApi.Controllers
 
             if (user == null)
             {
-                _logger.LogInformation($"GET: User not found with username: {username}");
+                AuthLogger.LogInformation<UserController>($"GET: User not found with username: {username}");
                 return NotFound();
             }
 
@@ -82,7 +80,7 @@ namespace AuthApi.Controllers
             var userToUpdate = await _context.User.FindAsync(id);
             if (userToUpdate == null)
             {
-                _logger.LogWarning($"PUT: User not found with id: {id}");
+                AuthLogger.LogWarning<UserController>($"PUT: User not found with id: {id}");
                 return NotFound();
             }
 
@@ -94,7 +92,7 @@ namespace AuthApi.Controllers
             }
             catch (DbUpdateConcurrencyException ex)
             {
-                _logger.LogError($"Update User (Id: {id}) Concurrency Exception: {ex.Message}");
+                AuthLogger.LogError<UserController>($"Update User (Id: {id}) Concurrency Exception: {ex.Message}");
                 return Problem("An internal error occurred, please try again later", statusCode: (int)HttpStatusCode.InternalServerError);
             }
 
@@ -114,13 +112,8 @@ namespace AuthApi.Controllers
                 }
                 catch (ApplicationException ex)
                 {
-                    _logger.LogError($"Application Exception on register for username {user.Username}: {ex.Message}");
+                    AuthLogger.LogError<UserController>($"Application Exception on register for username {user.Username}: {ex.Message}");
                     return BadRequest(ex.Message);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"Error on register for username {user.Username}: {ex.Message}");
-                    return StatusCode(500, "An Internal Error occurred");
                 }
 
                 return NoContent();
@@ -135,7 +128,7 @@ namespace AuthApi.Controllers
             var user = await _context.User.FindAsync(id);
             if (user == null)
             {
-                _logger.LogWarning($"DELETE: User not found with id: {id}");
+                AuthLogger.LogWarning<UserController>($"DELETE: User not found with id: {id}");
                 return NotFound();
             }
 
@@ -157,7 +150,7 @@ namespace AuthApi.Controllers
             }
             else
             {
-                _logger.LogError($"Error sending verificaiton code to {email}");
+                AuthLogger.LogError<UserController>($"Error sending verificaiton code to {email}");
                 return Problem("There was a problem sending the verification code. Please check the email address and try again.");
             }
         }

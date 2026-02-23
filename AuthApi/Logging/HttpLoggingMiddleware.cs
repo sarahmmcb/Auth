@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
-using Azure;
 
 namespace AuthApi.Logging
 {
@@ -20,16 +19,13 @@ namespace AuthApi.Logging
     public class HttpLoggingMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly ILogger<HttpLoggingMiddleware> _logger;
         private HttpLoggingOptions _options = new HttpLoggingOptions();
 
         public HttpLoggingMiddleware(
             RequestDelegate next,
-            ILogger<HttpLoggingMiddleware> logger,
             HttpLoggingOptions options)
         {
             _next = next;
-            _logger = logger;
             _options = options;
         }
 
@@ -121,7 +117,7 @@ namespace AuthApi.Logging
 
         private void LogRequest(HttpContext context, string requestBody)
         {
-            _logger.LogInformation(
+            AuthLogger.LogInformation<HttpLoggingMiddleware>(
                 $"HTTP {context.Request.Method} {context.Request.Path}\n" +
                 $"received at {DateTime.UtcNow}\n" +
                 $"Request Body: {requestBody}"
@@ -130,7 +126,7 @@ namespace AuthApi.Logging
 
         private void LogResponse(HttpContext context, string responseBody)
         {
-            _logger.LogInformation(
+            AuthLogger.LogInformation<HttpLoggingMiddleware>(
                 $"HTTP {context.Response.StatusCode} returned for {context.Request.Method}\n" +
                 $"Path: {context.Request.Path}\n" +
                 $"Response Body: {responseBody}"

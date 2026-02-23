@@ -3,13 +3,13 @@ using Auth.Contracts.RequestContracts;
 using AuthApi.Logic;
 using Auth.Contracts.ResponseContracts;
 using Microsoft.AspNetCore.Authorization;
-using System.Net;
+using AuthApi.Logging;
 
 namespace AuthApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class SessionController(ISessionService _sessionService, ILogger<SessionController> _logger) : ControllerBase
+    public class SessionController(ISessionService _sessionService) : ControllerBase
     {
         [HttpPost]
         [Route("login")]
@@ -26,7 +26,7 @@ namespace AuthApi.Controllers
 
                 SetCookies(refreshToken, request.UserName);
 
-                _logger.LogInformation($"Login successful for {request.UserName}");
+                AuthLogger.LogInformation<SessionController>($"Login successful for {request.UserName}");
                 return Ok(new TokenResponse { Token = token });
             }
             catch (ApplicationException ex)
@@ -35,12 +35,8 @@ namespace AuthApi.Controllers
             }
             catch (UnauthorizedAccessException)
             {
+                AuthLogger.LogError<SessionController>($"Login failed for {request.UserName}");
                 return Unauthorized("Username or Password is incorrect");
-            }
-            catch(Exception ex)
-            {
-                _logger.LogError($"Unexpected error on login for {request.UserName}: {ex.Message}");
-                return Problem("An internal error occurred", statusCode: (int)HttpStatusCode.InternalServerError);
             }
         }
 
@@ -67,11 +63,6 @@ namespace AuthApi.Controllers
             {
                 return BadRequest(ex.Message);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Unexpected error on refresh: {ex.Message}");
-                return Problem("An internal error occurred", statusCode: (int)HttpStatusCode.InternalServerError);
-            }
         }
 
         [HttpPost]
@@ -85,10 +76,9 @@ namespace AuthApi.Controllers
             {
                 await _sessionService.Logout(user.Claims);
             }
-            catch (Exception ex)
+            catch(ApplicationException ex)
             {
-                _logger.LogError($"Unexpected error on logout: {ex.Message}");
-                return Problem("An internal error occurred", statusCode: (int)HttpStatusCode.InternalServerError);
+                return BadRequest(ex.Message);
             }
 
             return Ok();

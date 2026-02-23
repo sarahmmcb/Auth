@@ -1,6 +1,7 @@
 using System.Text;
 using AuthApi.Data;
 using AuthApi.Email;
+using AuthApi.Exceptions;
 using AuthApi.Helpers;
 using AuthApi.Logging;
 using AuthApi.Logic;
@@ -14,10 +15,14 @@ using Microsoft.OpenApi.Models;
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 var configuration = builder.Configuration;
 
 builder.Services.AddLogging();
+builder.Services.AddExceptionHandler<GenericExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services.Configure<SmtpSettings>(
     configuration.GetSection("SmtpSettings"));
@@ -109,6 +114,10 @@ builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, LocalAuthMi
 
 var app = builder.Build();
 
+var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+var logger = loggerFactory.CreateLogger("default");
+AuthLogger.Initialize(logger);
+
 using (var scope = app.Services.CreateScope())
 {
     DbInitializer.Seed(scope.ServiceProvider);
@@ -127,6 +136,7 @@ if (app.Environment.IsDevelopment())
 
 ConfigurationHelper.Initialize(app.Services.GetRequiredService<IConfiguration>());
 
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseCustomHttpLogging();
 
