@@ -1,20 +1,28 @@
-using Microsoft.EntityFrameworkCore;
-using AuthApi.Data;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using AuthApi.Helpers;
-using Microsoft.OpenApi.Models;
-using AuthApi.Logic;
-using Microsoft.AspNetCore.Authorization;
-using AuthApi.Security;
-using AuthApi.Models;
+using AuthApi.Data;
 using AuthApi.Email;
+using AuthApi.Exceptions;
+using AuthApi.Helpers;
+using AuthApi.Logging;
+using AuthApi.Logic;
+using AuthApi.Models;
+using AuthApi.Security;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 var configuration = builder.Configuration;
+
+builder.Services.AddLogging();
+builder.Services.AddExceptionHandler<GenericExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services.Configure<SmtpSettings>(
     configuration.GetSection("SmtpSettings"));
@@ -106,6 +114,10 @@ builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, LocalAuthMi
 
 var app = builder.Build();
 
+var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+var logger = loggerFactory.CreateLogger("default");
+AuthLogger.Initialize(logger);
+
 using (var scope = app.Services.CreateScope())
 {
     DbInitializer.Seed(scope.ServiceProvider);
@@ -124,13 +136,14 @@ if (app.Environment.IsDevelopment())
 
 ConfigurationHelper.Initialize(app.Services.GetRequiredService<IConfiguration>());
 
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
+app.UseCustomHttpLogging();
 
 app.UseCors(MyAllowSpecificOrigins);
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

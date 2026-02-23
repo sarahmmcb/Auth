@@ -1,6 +1,7 @@
 ﻿using Auth.Contracts;
 using Auth.Contracts.RequestContracts;
 using AuthApi.Data;
+using AuthApi.Logging;
 using AuthApi.Security;
 
 namespace AuthApi.Logic
@@ -17,6 +18,7 @@ namespace AuthApi.Logic
         {
             if (_userDbContext.User.Any(u => string.Equals(u.UserName, user.Username)))
             {
+                AuthLogger.LogWarning<UserService>($"Attempt to register with existing username: {user.Username}");
                 throw new ApplicationException("That username is already taken");
             }
 
@@ -31,6 +33,7 @@ namespace AuthApi.Logic
 
             if (user is null)
             {
+                AuthLogger.LogError<UserService>("Update Password request failed because supplied user is null");
                 throw new ApplicationException("User invalid");
             }
 

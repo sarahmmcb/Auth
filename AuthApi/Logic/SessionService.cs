@@ -2,6 +2,7 @@
 using AuthApi.Data;
 using AuthApi.Security;
 using System.Security.Claims;
+using AuthApi.Logging;
 
 namespace AuthApi.Logic
 {
@@ -24,6 +25,7 @@ namespace AuthApi.Logic
 
             if (user is null || !PasswordManager.VerifyPassword(password, user.Password))
             {
+                AuthLogger.LogError<SessionService>($"Error logging in. User: {user} (if user is defined, then pw was incorrect)");
                 throw new UnauthorizedAccessException("Username or Password is incorrect");
             }
 
@@ -34,12 +36,13 @@ namespace AuthApi.Logic
             _userDbContext.RefreshToken.Add(refreshTokenEntity);
             await _userDbContext.SaveChangesAsync();
 
+            AuthLogger.LogInformation<SessionService>($"Returning token and refresh token for {userName}");
             return (token, refreshTokenEntity.Token);
         }
 
         public async Task<(string, string)> RefreshAccessToken(string userName, string refreshToken)
         {
-            var storedToken = await _userDbContext.RefreshToken
+            var storedRefreshToken = await _userDbContext.RefreshToken
                 .Where(u => string.Equals(u.UserName, userName) && string.Equals(u.Token, refreshToken)).FirstOrDefaultAsync();
 
             var user = await _userDbContext.User
@@ -48,14 +51,15 @@ namespace AuthApi.Logic
                 .Where(u => u.UserName == userName)
                 .FirstOrDefaultAsync();
 
-            if (storedToken is null ||
-                storedToken.Revoked ||
-                storedToken.Expires < DateTimeOffset.UtcNow)
+            if (storedRefreshToken is null ||
+                storedRefreshToken.Revoked ||
+                storedRefreshToken.Expires < DateTimeOffset.UtcNow)
             {
+                AuthLogger.LogWarning<SessionService>($"Refresh token null, expired, or revoked for {userName}");
                 throw new UnauthorizedAccessException("Please log in again");
             }
 
-            storedToken.Revoked = true;
+            storedRefreshToken.Revoked = true;
 
             var token = await TokenManager.GenerateToken(user, _userDbContext) ?? throw new ApplicationException("An error ocurred");
 
@@ -69,7 +73,13 @@ namespace AuthApi.Logic
 
         public async Task Logout(IEnumerable<Claim> claims)
         {
-            var userName = claims.Where(c => c.Type == ClaimTypes.Name).FirstOrDefault() ?? throw new ApplicationException("Username was null");
+            var userName = claims.Where(c => c.Type == ClaimTypes.Name).FirstOrDefault();
+            
+            if (userName is null)
+            {
+                AuthLogger.LogError<SessionService>("Logout attempt failed: username was null");
+                throw new ApplicationException("Username was null");
+            }
 
             var refreshTokenRows = _userDbContext.RefreshToken.Where(t => t.UserName.Equals(userName.Value) && !t.Revoked);
 

@@ -3,6 +3,7 @@ using Auth.Contracts.RequestContracts;
 using AuthApi.Logic;
 using Auth.Contracts.ResponseContracts;
 using Microsoft.AspNetCore.Authorization;
+using AuthApi.Logging;
 
 namespace AuthApi.Controllers
 {
@@ -25,19 +26,17 @@ namespace AuthApi.Controllers
 
                 SetCookies(refreshToken, request.UserName);
 
+                AuthLogger.LogInformation<SessionController>($"Login successful for {request.UserName}");
                 return Ok(new TokenResponse { Token = token });
             }
             catch (ApplicationException ex)
             {
                 return BadRequest(ex.Message);
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException)
             {
+                AuthLogger.LogError<SessionController>($"Login failed for {request.UserName}");
                 return Unauthorized("Username or Password is incorrect");
-            }
-            catch(Exception ex)
-            {
-                return Problem("An internal error occurred", statusCode: 500);
             }
         }
 
@@ -45,33 +44,24 @@ namespace AuthApi.Controllers
         [Route("refresh")]
         public async Task<IActionResult> Refresh()
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
             try
             {
                 HttpContext.Request.Cookies.TryGetValue("refreshToken", out var refreshToken);
                 HttpContext.Request.Cookies.TryGetValue("userName", out var userName);
 
-                var (token, newRefreshToken) = await _sessionService.RefreshAccessToken(userName, refreshToken).ConfigureAwait(false);
+                var (token, newRefreshToken) = await _sessionService.RefreshAccessToken(userName!, refreshToken!).ConfigureAwait(false);
 
-                SetCookies(newRefreshToken, userName);
+                SetCookies(newRefreshToken, userName!);
 
                 return Ok(new TokenResponse { Token = token });
             }
-            catch (UnauthorizedAccessException ex)
+            catch (UnauthorizedAccessException)
             {
-                return Unauthorized(ex.Message);
+                return Unauthorized("Session expired, please log in again");
             }
             catch (ApplicationException ex)
             {
                 return BadRequest(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                return Problem("An internal error occurred", statusCode: 500);
             }
         }
 
@@ -86,7 +76,7 @@ namespace AuthApi.Controllers
             {
                 await _sessionService.Logout(user.Claims);
             }
-            catch (Exception ex)
+            catch(ApplicationException ex)
             {
                 return BadRequest(ex.Message);
             }
