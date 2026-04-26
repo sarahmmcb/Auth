@@ -9,8 +9,9 @@ EnsureDatabase.For.SqlDatabase(connectionString);
 
 var upgrader =
     DeployChanges.To
-        .SqlDatabase(connectionString)
+        .SqlDatabase(connectionString, "core")
         .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
+        .WithVariablesDisabled()
         .LogToConsole()
         .Build();
 

@@ -1,27 +1,23 @@
-﻿using Microsoft.EntityFrameworkCore;
-using AuthApi.Data;
-using AuthApi.Security;
+﻿using AuthApi.Security;
 using System.Security.Claims;
 using AuthApi.Logging;
+using AuthDAL.DataAccess;
+using Auth.Contracts;
 
 namespace AuthApi.Logic
 {
     public interface ISessionService
     {
-        Task<(string, string)> Login(string userName, string password);
-        Task<(string, string)> RefreshAccessToken(string userName, string refreshToken);
-        Task Logout(IEnumerable<Claim> claims);
+        Task<(string, string)> Login(string userName, string password, CancellationToken token);
+        Task<(string, string)> RefreshAccessToken(string userName, string refreshToken, CancellationToken token);
+        Task Logout(IEnumerable<Claim> claims, CancellationToken token);
     }
 
-    public class SessionService(UserDbContext _userDbContext) : ISessionService
+    public class SessionService(IDataProvider _dataProvider, IUserService _userService) : ISessionService
     {
-        public async Task<(string, string)> Login(string userName, string password)
+        public async Task<(string, string)> Login(string userName, string password, CancellationToken token)
         {
-            var user = await _userDbContext.User
-                .Include(u => u.UserRoles)
-                .ThenInclude(ur => ur.Role)
-                .Where(u => string.Equals(u.UserName, userName))
-                .FirstOrDefaultAsync();
+            var user = await _userService.GetUserByUserName(userName, token);
 
             if (user is null || !PasswordManager.VerifyPassword(password, user.Password))
             {
@@ -29,49 +25,62 @@ namespace AuthApi.Logic
                 throw new UnauthorizedAccessException("Username or Password is incorrect");
             }
 
-            var token = await TokenManager.GenerateToken(user, _userDbContext) ?? throw new ApplicationException("An error ocurred");
+            var authToken = TokenManager.GenerateToken(user) ?? throw new ApplicationException("An error ocurred");
 
             var refreshTokenEntity = TokenManager.GenerateRefreshToken(user);
 
-            _userDbContext.RefreshToken.Add(refreshTokenEntity);
-            await _userDbContext.SaveChangesAsync();
+            await _dataProvider.ExecuteSimpleProc("core.RefreshToken_I", new  // TODO: Bonus exercise: code an Object.Assign C# equivalent
+            {
+                refreshTokenEntity.Token,
+                refreshTokenEntity.Expires,
+                refreshTokenEntity.Revoked,
+                refreshTokenEntity.UserName
+            }, token);
 
             AuthLogger.LogInformation<SessionService>($"Returning token and refresh token for {userName}");
-            return (token, refreshTokenEntity.Token);
+            return (authToken, refreshTokenEntity.Token);
         }
 
-        public async Task<(string, string)> RefreshAccessToken(string userName, string refreshToken)
+        public async Task<(string, string)> RefreshAccessToken(string userName, string refreshToken, CancellationToken token)
         {
-            var storedRefreshToken = await _userDbContext.RefreshToken
-                .Where(u => string.Equals(u.UserName, userName) && string.Equals(u.Token, refreshToken)).FirstOrDefaultAsync();
-
-            var user = await _userDbContext.User
-                .Include(u => u.UserRoles)
-                .ThenInclude(ur => ur.Role)
-                .Where(u => u.UserName == userName)
-                .FirstOrDefaultAsync();
+            var storedRefreshToken = (await _dataProvider.LoadData<RefreshToken, dynamic>("core.RefreshToken_S", new
+            {
+                UserName = userName
+            }, token)).Where(t => string.Equals(t.Token, refreshToken)).FirstOrDefault();
 
             if (storedRefreshToken is null ||
                 storedRefreshToken.Revoked ||
                 storedRefreshToken.Expires < DateTimeOffset.UtcNow)
             {
                 AuthLogger.LogWarning<SessionService>($"Refresh token null, expired, or revoked for {userName}");
-                throw new UnauthorizedAccessException("Please log in again");
+                throw new UnauthorizedAccessException("Session expired, please log in again");
             }
 
-            storedRefreshToken.Revoked = true;
+            var user = await _userService.GetUserByUserName(userName, token);
 
-            var token = await TokenManager.GenerateToken(user, _userDbContext) ?? throw new ApplicationException("An error ocurred");
+            if (user == null)
+            {
+                throw new ApplicationException("User not found");
+            }
+
+            await _dataProvider.ExecuteSimpleProc("core.RefreshToken_Revoke", new { storedRefreshToken.Id }, token);
+
+            var authToken = TokenManager.GenerateToken(user) ?? throw new ApplicationException("An error ocurred");
 
             var refreshTokenEntity = TokenManager.GenerateRefreshToken(user);
 
-            _userDbContext.RefreshToken.Add(refreshTokenEntity);
-            await _userDbContext.SaveChangesAsync();
+            await _dataProvider.ExecuteSimpleProc("core.RefreshToken_I", new
+            {
+                refreshTokenEntity.Token,
+                refreshTokenEntity.Expires,
+                refreshTokenEntity.Revoked,
+                refreshTokenEntity.UserName
+            }, token);
 
-            return (token, refreshTokenEntity.Token);
+            return (authToken, refreshTokenEntity.Token);
         }
 
-        public async Task Logout(IEnumerable<Claim> claims)
+        public async Task Logout(IEnumerable<Claim> claims, CancellationToken token)
         {
             var userName = claims.Where(c => c.Type == ClaimTypes.Name).FirstOrDefault();
             
@@ -81,14 +90,10 @@ namespace AuthApi.Logic
                 throw new ApplicationException("Username was null");
             }
 
-            var refreshTokenRows = _userDbContext.RefreshToken.Where(t => t.UserName.Equals(userName.Value) && !t.Revoked);
-
-            foreach (var row in refreshTokenRows)
+            await _dataProvider.ExecuteSimpleProc("core.RefreshToken_RevokeAll_ByUserName", new
             {
-                row.Revoked = true;
-            }
-
-            await _userDbContext.SaveChangesAsync();
+                userName
+            }, token);
         }
     }
 }
