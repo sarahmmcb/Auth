@@ -10,9 +10,6 @@ namespace Auth.Contracts
         public required string UserName { get; set; }
         public required string Password { get; set; }
         public AccountStatus AccountStatus { get; set; }
-        public DateTimeOffset CreateDate { get; set; }
-
-        internal ICollection<UserRole> UserRoles { get; set; }
-        internal ICollection<VerificationCode> VerificationCodes { get; set; }
+        public List<Role> Roles { get; set; }
     }
 }

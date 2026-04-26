@@ -13,7 +13,7 @@ namespace AuthApi.Controllers
     {
         [HttpPost]
         [Route("login")]
-        public async Task<IActionResult> Login(LoginRequest request)
+        public async Task<IActionResult> Login(LoginRequest request, CancellationToken token)
         {
             if (!ModelState.IsValid)
             {
@@ -22,12 +22,12 @@ namespace AuthApi.Controllers
 
             try
             {
-                var (token, refreshToken) = await _sessionService.Login(request.UserName, request.Password).ConfigureAwait(false);
+                var (authToken, refreshToken) = await _sessionService.Login(request.UserName, request.Password, token).ConfigureAwait(false);
 
                 SetCookies(refreshToken, request.UserName);
 
                 AuthLogger.LogInformation<SessionController>($"Login successful for {request.UserName}");
-                return Ok(new TokenResponse { Token = token });
+                return Ok(new TokenResponse { Token = authToken });
             }
             catch (ApplicationException ex)
             {
@@ -42,22 +42,22 @@ namespace AuthApi.Controllers
 
         [HttpGet]
         [Route("refresh")]
-        public async Task<IActionResult> Refresh()
+        public async Task<IActionResult> Refresh(CancellationToken token)
         {
             try
             {
                 HttpContext.Request.Cookies.TryGetValue("refreshToken", out var refreshToken);
                 HttpContext.Request.Cookies.TryGetValue("userName", out var userName);
 
-                var (token, newRefreshToken) = await _sessionService.RefreshAccessToken(userName!, refreshToken!).ConfigureAwait(false);
+                var (authToken, newRefreshToken) = await _sessionService.RefreshAccessToken(userName!, refreshToken!, token).ConfigureAwait(false);
 
                 SetCookies(newRefreshToken, userName!);
 
-                return Ok(new TokenResponse { Token = token });
+                return Ok(new TokenResponse { Token = authToken });
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized("Session expired, please log in again");
+                return Unauthorized(ex.Message);
             }
             catch (ApplicationException ex)
             {
@@ -68,13 +68,13 @@ namespace AuthApi.Controllers
         [HttpPost]
         [Route("logout")]
         [Authorize]
-        public async Task<IActionResult> Logout()
+        public async Task<IActionResult> Logout(CancellationToken token)
         {
             var user = HttpContext.User;
 
             try
             {
-                await _sessionService.Logout(user.Claims);
+                await _sessionService.Logout(user.Claims, token);
             }
             catch(ApplicationException ex)
             {

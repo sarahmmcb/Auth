@@ -2,9 +2,7 @@
 using System.Security.Claims;
 using System.Text;
 using Auth.Contracts;
-using AuthApi.Data;
 using AuthApi.Helpers;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using NuGet.Packaging;
 
@@ -12,7 +10,7 @@ namespace AuthApi.Security
 {
     public static class TokenManager
     {
-        public static async Task<string?> GenerateToken(User user, UserDbContext _context, int expMin = 1440)
+        public static string GenerateToken(User user, int expMin = 1440)
         {
             var config = ConfigurationHelper.Section("JwtConfig");
             var secret = config.GetValue<string>("Secret");
@@ -41,14 +39,14 @@ namespace AuthApi.Security
 
             var claimsToAdd = new List<Claim>();
 
-            var userRoles = user.UserRoles ?? await _context.UserRoles.Include(ur => ur.Role).Where(ur => ur.UserId == user.Id).ToListAsync();
+            var userRoles = user.Roles;
 
             foreach (var userRole in userRoles)
             {
-                if (userRole.Role is null)
+                if (userRole.RoleName is null)
                     continue;
 
-                var roleName = userRole.Role.RoleName;
+                var roleName = userRole.RoleName;
                 claimsToAdd.Add(new Claim(ClaimTypes.Role, roleName));
             }
 

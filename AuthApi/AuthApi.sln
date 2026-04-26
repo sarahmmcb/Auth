@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthApi", "AuthApi.csproj",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Auth.Contracts", "..\Auth.Contracts\Auth.Contracts.csproj", "{75BFDFD5-6A90-4979-AD58-BAED8618E660}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Auth.DbUp", "..\Auth.DbUp\Auth.DbUp.csproj", "{5D008925-38B5-4963-A995-A4514C49D8BB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthDAL", "..\AuthDAL\AuthDAL.csproj", "{79BBADC5-E6A9-44DD-8D25-1F7A5AD975C9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,8 +25,19 @@ Global
 		{75BFDFD5-6A90-4979-AD58-BAED8618E660}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{75BFDFD5-6A90-4979-AD58-BAED8618E660}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{75BFDFD5-6A90-4979-AD58-BAED8618E660}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D008925-38B5-4963-A995-A4514C49D8BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D008925-38B5-4963-A995-A4514C49D8BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D008925-38B5-4963-A995-A4514C49D8BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D008925-38B5-4963-A995-A4514C49D8BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79BBADC5-E6A9-44DD-8D25-1F7A5AD975C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79BBADC5-E6A9-44DD-8D25-1F7A5AD975C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79BBADC5-E6A9-44DD-8D25-1F7A5AD975C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79BBADC5-E6A9-44DD-8D25-1F7A5AD975C9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {89A21277-8E8C-4D7F-9544-4DD39ABC4D97}
 	EndGlobalSection
 EndGlobal

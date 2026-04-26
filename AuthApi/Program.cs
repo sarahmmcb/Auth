@@ -1,5 +1,4 @@
 using System.Text;
-using AuthApi.Data;
 using AuthApi.Email;
 using AuthApi.Exceptions;
 using AuthApi.Helpers;
@@ -7,9 +6,9 @@ using AuthApi.Logging;
 using AuthApi.Logic;
 using AuthApi.Models;
 using AuthApi.Security;
+using AuthDAL.DataAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -42,9 +41,6 @@ builder.Services.AddCors(options =>
 
 
 });
-
-builder.Services.AddDbContext<UserDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -106,6 +102,8 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+builder.Services.AddScoped<IDataConnectionFactory, DataConnectionFactory>();
+builder.Services.AddScoped<IDataProvider, DataProvider>();
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<ISessionService, SessionService>();
 builder.Services.AddTransient<IVerificationCodeService, VerificationCodeService>();
@@ -117,11 +115,6 @@ var app = builder.Build();
 var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
 var logger = loggerFactory.CreateLogger("default");
 AuthLogger.Initialize(logger);
-
-using (var scope = app.Services.CreateScope())
-{
-    DbInitializer.Seed(scope.ServiceProvider);
-}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
