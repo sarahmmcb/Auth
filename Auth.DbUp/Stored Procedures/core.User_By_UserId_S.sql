@@ -16,7 +16,6 @@ begin
 	,u.UserName
 	,u.[Password]
 	,u.AccountStatus
-	,u.CreateDate
 	,r.RoleId
 	,r.RoleName
   from core.[User] u

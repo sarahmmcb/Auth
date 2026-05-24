@@ -9,6 +9,8 @@
   <PropertyGroup>
 	  <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 	  <OutputPath>C:\Dev\Projects\IIS\Auth</OutputPath>
+	  <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+	  <UserSecretsId>53ff2d1c-c1f7-49a6-b5bc-fcec7bc4d7f5</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +29,7 @@
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="MailKit" Version="4.16.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.3" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>

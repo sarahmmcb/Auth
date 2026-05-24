@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using System.Data.Common;
 using System.Transactions;
-using Auth.Contracts;
+using AuthDAL.Models;
 using Auth.Contracts.RequestContracts;
 using Dapper;
 
@@ -62,7 +62,7 @@ public class DataProvider : IDataProvider
         var connection = _dataConnectionFactory.CeTrackerSqlConnection();
 
         // Select the record first so we can use existing data for null fields on the request
-        var currentUser = (await LoadData<User, dynamic>("core.User_By_UserId_S", new { request.UserId }, token)).ToList().FirstOrDefault();
+        var currentUser = (await LoadData<UserDTO, dynamic>("core.User_By_UserId_S", new { request.UserId }, token)).ToList().FirstOrDefault();
 
         if (currentUser == null)
         {
@@ -158,6 +158,7 @@ public class DataProvider : IDataProvider
             UserName = user.Username,
             Password = user.Password,
             AccountStatus = user.AccountStatus,
+            CreateDate = DateTimeOffset.Now,
             UpdateUserId = 0,
             IsDeleted = false
         },

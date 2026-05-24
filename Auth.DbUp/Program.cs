@@ -3,6 +3,7 @@ using System.Reflection;
 
 var connectionString =
     args.FirstOrDefault()
+    ?? Environment.GetEnvironmentVariable("ConnectionString")
     ?? "Data Source=localhost\\SQLEXPRESS;Initial Catalog=CASCETracker;Integrated Security=True;Connect Timeout=30;Encrypt=False";
 
 EnsureDatabase.For.SqlDatabase(connectionString);

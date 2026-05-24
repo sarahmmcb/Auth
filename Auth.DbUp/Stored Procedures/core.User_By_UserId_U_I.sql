@@ -55,7 +55,6 @@ begin
 	,@UserName
 	,@Password
 	,@AccountStatus
-	,@UpdateDate
 	,0
   )
 

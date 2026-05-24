@@ -119,6 +119,7 @@ namespace AuthApi.Logic
 
             var user = new User
             {
+                Id = userList[0].Id,
                 FirstName = userList[0].FirstName,
                 LastName = userList[0].LastName,
                 Email = userList[0].Email,
