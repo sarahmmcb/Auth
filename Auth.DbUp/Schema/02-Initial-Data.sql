@@ -24,7 +24,7 @@ insert into core.[User] values
 	,'sideshow.bob@simpsons.org'
 	,'$2a$11$yIyAzG2qqVpGYr4vvW5Rhu0zAQBlo3GuxUsc/gyyvoqIOBC98A91W' -- BobsPassword
 	,(Select AccountStatusId from core.AccountStatus where [Description]=N'Active')
-	,CAST('2026-03-28 16:31:00.0000000 -04:00' AS DATETIMEOFFSET)
+	,0
 )
 
 if not exists (select 1	from core.[User] where UserName=N'lovejoy.helen@simpsons.org')
@@ -36,7 +36,7 @@ insert into core.[User] values
 	,'lovejoy.helen@simpsons.org'
 	,'$2a$11$jlxgg3huqAkKy9vN6enwred6wUvH.9B6LVTZWCLBZbcCmgvnXaCri' -- HelensPassword
 	,(Select AccountStatusId from core.AccountStatus where [Description]=N'Active')
-	,CAST('2026-03-28 16:31:00.0000000 -04:00' AS DATETIMEOFFSET)
+	,0
 )
 GO
 
@@ -51,4 +51,6 @@ GO
 * User Roles
 *****/
 if not exists (select 1 from core.UserRole where UserId=1 and RoleId=2) insert into core.UserRole values (1,2) -- Give Bob Admin Privs
+if not exists (select 1 from core.UserRole where UserId=1 and RoleId=1) insert into core.UserRole values (1,1)
+if not exists (select 1 from core.UserRole where UserId=2 and RoleId=1) insert into core.UserRole values (2,1)
 GO

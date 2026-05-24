@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Auth.DbUp": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

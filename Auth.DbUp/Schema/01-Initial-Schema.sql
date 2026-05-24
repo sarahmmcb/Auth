@@ -124,12 +124,12 @@ if not exists (select * from dbo.sysobjects where ID=object_id(N'core.Role') and
 create table core.[Role]
 (
     -- primary key
-    Id int not null identity(1,1)
+    RoleId int not null identity(1,1)
 
     -- data
     ,RoleName nvarchar(128)
 
-  ,Constraint PK_Role_Id Primary Key Clustered (Id)
+  ,Constraint PK_Role_Id Primary Key Clustered (RoleId)
 )
 GO
 
@@ -144,7 +144,7 @@ create table core.[UserRole]
 
     ,Constraint PK_UserRole Primary Key Clustered (UserId, RoleId)
     ,Constraint FK_UserRole_UserId Foreign Key (UserId) References core.[User](Id)
-    ,Constraint FK_UserRole_RoleId Foreign Key (RoleId) References core.[Role](Id)
+    ,Constraint FK_UserRole_RoleId Foreign Key (RoleId) References core.[Role](RoleId)
 )
 GO
 

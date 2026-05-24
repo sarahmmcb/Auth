@@ -1,0 +1,46 @@
+﻿services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "7Qt*_~kMMHB6"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -U sa -P 7Qt*_~kMMHB6 -Q 'SELECT 1' -C || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  dbup:
+    build:
+      context: .
+      dockerfile: Auth.DbUp/Dockerfile
+    environment:
+      ConnectionString: "Server=sqlserver;User Id=sa;Password=7Qt*_~kMMHB6;Database=CASCETracker;Encrypt=False;"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  authapi:
+    build:
+      context: .
+      dockerfile: AuthApi/Dockerfile
+    ports:
+      - "5000:5000"
+      - "44370:5001"
+    environment:
+      ConnectionStrings__Default: "Server=sqlserver;User Id=AUTHAPI_LOGIN;Password=PeaceSuburb@502;Database=CASCETracker;Encrypt=False;"
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "5000"
+      ASPNETCORE_HTTPS_PORTS: "5001"
+      ASPNETCORE_Kestrel__Certificates__Default__Path: cert.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: password
+    depends_on:
+      dbup:
+        condition: service_completed_successfully
+
+volumes:
+  sqlserver_data:

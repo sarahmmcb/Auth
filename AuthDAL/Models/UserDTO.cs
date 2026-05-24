@@ -10,7 +10,6 @@ public class UserDTO
     public required string UserName { get; set; }
     public required string Password { get; set; }
     public AccountStatus AccountStatus { get; set; }
-    public DateTimeOffset CreateDate { get; set; }
     public int RoleId { get; set; }
     public required string RoleName { get; set; }
 }
