@@ -39,8 +39,8 @@
       ASPNETCORE_Kestrel__Certificates__Default__Path: cert.pfx
       ASPNETCORE_Kestrel__Certificates__Default__Password: password
     depends_on:
-      dbup:
-        condition: service_completed_successfully
+      sqlserver:
+        condition: service_healthy
 
 volumes:
   sqlserver_data:
