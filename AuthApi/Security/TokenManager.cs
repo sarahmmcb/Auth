@@ -28,7 +28,8 @@ namespace AuthApi.Security
             {
                 Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim(ClaimTypes.Name, user.UserName)
+                    new Claim(ClaimTypes.Name, user.UserName),
+                    new Claim("user_id", user.Id.ToString())
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(expMin),
                 Issuer = issuer,
